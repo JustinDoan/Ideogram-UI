@@ -118,8 +118,11 @@ function setupTabs() {
 
 function resizeStage() {
   const ratio = window.devicePixelRatio || 1;
-  const width = Math.max(1, stage.clientWidth);
-  const height = Math.max(1, stage.clientHeight);
+  const workspace = stage.parentElement;
+  const width = Math.max(1, workspace.clientWidth);
+  const height = Math.max(1, workspace.clientHeight);
+  stage.style.width = `${width}px`;
+  stage.style.height = `${height}px`;
   stage.width = Math.round(width * ratio);
   stage.height = Math.round(height * ratio);
   stageContext.setTransform(ratio, 0, 0, ratio, 0, 0);
