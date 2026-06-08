@@ -7,7 +7,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check public/app.js",
+    "check": "node --check server.js && node --check public/app.js && node --check public/inpaint.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "npm run check"

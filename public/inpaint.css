@@ -1,0 +1,53 @@
+.inpaint-main {
+  display: grid;
+  grid-template-columns: 300px minmax(420px, 1fr) 320px;
+  height: calc(100vh - 64px);
+}
+.inpaint-controls,
+.inpaint-result {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 20px;
+  overflow: auto;
+}
+.inpaint-result {
+  border-left: 1px solid var(--line);
+  border-right: 0;
+}
+.inpaint-work {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+#inpaint-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+#inpaint-output {
+  min-height: 260px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+#inpaint-output img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+@media (max-width: 1000px) {
+  .inpaint-main {
+    grid-template-columns: 250px 1fr;
+  }
+  .inpaint-result {
+    display: none;
+  }
+}

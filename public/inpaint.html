@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>IdeaDraw Inpaint</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="inpaint.css" />
+  </head>
+  <body class="inpaint-page">
+    <header>
+      <div class="brand"><b>IdeaDraw Inpaint</b></div>
+      <div class="status" id="falstatus"><i></i><span>Checking fal.ai</span></div>
+      <a class="navlink" href="/">Spatial Generate</a>
+      <button id="theme">Light</button>
+      <button id="inpaint-run">Inpaint</button>
+    </header>
+    <main class="inpaint-main">
+      <aside class="inpaint-controls">
+        <label>Source image<input id="source-file" type="file" accept="image/*" /></label>
+        <label
+          >Edit prompt<textarea
+            id="edit-prompt"
+            rows="8"
+            placeholder="Describe only what should change inside the mask"
+          ></textarea>
+        </label>
+        <label
+          >Quality<select id="quality">
+            <option>low</option>
+            <option selected>medium</option>
+            <option>high</option>
+          </select></label
+        >
+        <div class="panehead">
+          <span>Mask rectangle</span><button id="clear-mask">Clear</button>
+        </div>
+        <small
+          >Right-click the image to place a mask. Drag it to move; drag the bottom-right corner to
+          resize.</small
+        >
+      </aside>
+      <section class="inpaint-work">
+        <canvas id="inpaint-canvas"></canvas>
+      </section>
+      <aside class="inpaint-result">
+        <div class="panehead"><span>Result</span></div>
+        <div id="inpaint-output"><span>Your edited image will appear here.</span></div>
+      </aside>
+    </main>
+    <script src="inpaint.js"></script>
+  </body>
+</html>

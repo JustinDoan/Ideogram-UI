@@ -62,8 +62,12 @@ If your workflow uses different node IDs, update the constants and assignments i
 
 ## Inpainting
 
-The optional local inpainting stack uses Qwen Image Edit FP8 with ComfyUI-Inpaint-CropAndStitch. See
-[docs/INPAINT_SETUP.md](docs/INPAINT_SETUP.md).
+The separate inpaint workspace uses fal.ai's `openai/gpt-image-2/edit` endpoint. Copy `.env.example`
+to `.env`, set `FAL_KEY`, then open `/inpaint.html`.
+
+Upload an image, right-click to place the rectangular mask, and describe the edit. The browser
+generates a source-sized black-and-white PNG mask where white pixels identify the editable region.
+The API key remains server-side and is never exposed to browser code.
 
 The region JSON uses normalized coordinates:
 

@@ -8,6 +8,20 @@ const DEFAULT_PORT = 4173;
 const DEFAULT_COMFY_URL = "http://127.0.0.1:8000";
 const ROOT = __dirname;
 
+function loadEnvFile() {
+  const filename = path.join(ROOT, ".env");
+  if (!fs.existsSync(filename)) return;
+  fs.readFileSync(filename, "utf8")
+    .split(/\r?\n/)
+    .forEach((line) => {
+      const match = line.match(/^([^#=\s]+)\s*=\s*(.*)$/);
+      if (match && !process.env[match[1]])
+        process.env[match[1]] = match[2].replace(/^["']|["']$/g, "");
+    });
+}
+
+loadEnvFile();
+
 function readJson(filename) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, filename), "utf8"));
 }
@@ -27,10 +41,45 @@ function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(express.json({ limit: "20mb" }));
+  app.use(express.json({ limit: "60mb" }));
   app.use(express.static(path.join(ROOT, "public")));
 
   app.get("/api-workflow", (_req, res) => res.json(readJson("api-workflow.json")));
+  app.get("/api/config", (_req, res) => res.json({ falConfigured: Boolean(process.env.FAL_KEY) }));
+
+  app.post("/api/inpaint", async (req, res) => {
+    const apiKey = process.env.FAL_KEY;
+    const { image, mask, prompt, quality = "medium" } = req.body;
+    if (!apiKey) return res.status(503).json({ error: "FAL_KEY is not configured." });
+    if (!image || !mask || !prompt)
+      return res.status(400).json({ error: "Image, mask, and prompt are required." });
+
+    try {
+      const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
+        method: "POST",
+        headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          image_urls: [image],
+          mask_image_url: mask,
+          image_size: "auto",
+          quality: ["low", "medium", "high"].includes(quality) ? quality : "medium",
+          num_images: 1,
+          output_format: "png",
+          sync_mode: true,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        return res.status(response.status).json({ error: result.detail || result.error || result });
+      res.json(result);
+    } catch (error) {
+      res.status(502).json({
+        error: "Unable to complete fal.ai inpaint request.",
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
 
   app.all(/^\/comfy(\/.*)?$/, async (req, res) => {
     try {
