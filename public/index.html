@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>IdeaDraw</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand"><b>IdeaDraw</b></div>
+      <div class="topsize">
+        <span>Width</span><input id="width" type="number" /><span>x</span><span>Height</span
+        ><input id="height" type="number" />
+      </div>
+      <div class="status"><i></i><span id="status">Checking ComfyUI</span></div>
+      <button id="theme" title="Toggle theme">Light</button><button id="run">Generate</button>
+    </header>
+    <main>
+      <nav class="rail" data-tabs="left">
+        <button class="active" data-tab="setup"><b>01</b><span>Setup</span></button
+        ><button data-tab="layouts"><b>02</b><span>Layouts</span></button
+        ><button data-tab="regions"><b>03</b><span>Regions</span></button>
+      </nav>
+      <aside class="properties">
+        <div class="tabpane active" data-pane="setup">
+          <label>Scene prompt<textarea id="scene" rows="8"></textarea></label
+          ><label>Background prompt<textarea id="background" rows="6"></textarea></label
+          ><label>ComfyUI connection<input id="url" value="http://127.0.0.1:8000" /></label>
+        </div>
+        <div class="tabpane" data-pane="layouts">
+          <div class="panehead"><span>Saved layouts</span></div>
+          <div class="savebar">
+            <input id="layoutname" placeholder="Layout name" /><button id="savelayout">Save</button>
+          </div>
+          <div id="layouts"></div>
+        </div>
+        <div class="tabpane" data-pane="regions">
+          <div class="panehead"><span>Spatial regions</span><button id="add">Add box</button></div>
+          <div id="regions"></div>
+        </div>
+      </aside>
+      <section class="work">
+        <div class="toolbar">
+          <span>Canvas</span><button id="clear">Clear boxes</button
+          ><button id="export">Export JSON</button>
+        </div>
+        <div class="stagewrap"><div id="stage"></div></div>
+      </section>
+      <aside class="inspector">
+        <div class="panehead"><span>Selected region</span><button id="add2">Add box</button></div>
+        <div id="inspector" class="empty">Select a region to edit it.</div>
+      </aside>
+      <aside class="outputrail">
+        <nav class="tabs" data-tabs="right">
+          <button class="active" data-tab="output">Output</button
+          ><button data-tab="history">History</button>
+        </nav>
+        <div class="tabpane active" data-pane="output">
+          <div class="panehead">
+            <span>Generated image</span
+            ><label class="toggle"
+              ><input id="overlaytoggle" type="checkbox" /><span>Boxes</span></label
+            >
+          </div>
+          <div id="output"><span>Generated images appear here</span></div>
+          <button id="copyimage" disabled>Copy image</button>
+        </div>
+        <div class="tabpane" data-pane="history">
+          <div class="panehead">
+            <span>Previous generations</span><button id="refreshhistory">Refresh</button>
+          </div>
+          <div id="history"></div>
+        </div>
+      </aside>
+    </main>
+    <div id="viewer" aria-hidden="true">
+      <div class="viewerbar">
+        <span id="zoomlabel">100%</span
+        ><label class="toggle"
+          ><input id="vieweroverlaytoggle" type="checkbox" /><span>Boxes</span></label
+        ><button id="zoomout">-</button><button id="zoomreset">Reset</button
+        ><button id="zoomin">+</button><button id="viewerclose">Close</button>
+      </div>
+      <div id="viewport">
+        <div id="viewercontent">
+          <img id="viewerimage" alt="Generated image preview" />
+          <div id="vieweroverlay" class="previewoverlay"></div>
+        </div>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
