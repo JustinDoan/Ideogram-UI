@@ -28,6 +28,18 @@
   height: 100%;
   display: block;
   touch-action: none;
+  cursor: crosshair;
+}
+.brush-control span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.brush-control output {
+  color: var(--muted);
+}
+.brush-control input {
+  width: 100%;
 }
 #inpaint-output {
   min-height: 260px;

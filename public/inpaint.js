@@ -2,10 +2,15 @@
 
 const canvas = document.querySelector("#inpaint-canvas");
 const context = canvas.getContext("2d");
+const brushInput = document.querySelector("#brush-size");
+const brushValue = document.querySelector("#brush-size-value");
 let sourceImage = null;
 let sourceDataUrl = "";
-let mask = null;
+let maskCanvas = null;
+let maskContext = null;
+let hasMask = false;
 let interaction = null;
+let hoverPoint = null;
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -46,21 +51,28 @@ function draw() {
   const frame = imageFrame();
   if (!frame) return;
   context.drawImage(sourceImage, frame.x, frame.y, frame.width, frame.height);
+  if (maskCanvas) {
+    context.save();
+    context.globalAlpha = 0.42;
+    context.drawImage(maskCanvas, frame.x, frame.y, frame.width, frame.height);
+    context.restore();
+  }
   context.strokeStyle = styles.getPropertyValue("--line").trim();
   context.lineWidth = 2;
   context.strokeRect(frame.x, frame.y, frame.width, frame.height);
-  if (!mask) return;
-  const x = frame.x + mask.x * frame.width;
-  const y = frame.y + mask.y * frame.height;
-  const width = mask.w * frame.width;
-  const height = mask.h * frame.height;
-  context.fillStyle = "#ffffff45";
-  context.fillRect(x, y, width, height);
-  context.strokeStyle = "#ffad32";
-  context.lineWidth = 3;
-  context.strokeRect(x, y, width, height);
-  context.fillStyle = "#ffad32";
-  context.fillRect(x + width - 7, y + height - 7, 14, 14);
+  if (hoverPoint?.inside) {
+    context.strokeStyle = "#ffad32";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(
+      frame.x + hoverPoint.x * frame.width,
+      frame.y + hoverPoint.y * frame.height,
+      (Number(brushInput.value) / sourceImage.naturalWidth) * frame.width * 0.5,
+      0,
+      Math.PI * 2,
+    );
+    context.stroke();
+  }
 }
 
 function point(event) {
@@ -77,21 +89,38 @@ function point(event) {
   };
 }
 
-function makeMaskDataUrl() {
-  const output = document.createElement("canvas");
-  output.width = sourceImage.naturalWidth;
-  output.height = sourceImage.naturalHeight;
-  const ctx = output.getContext("2d");
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, output.width, output.height);
-  ctx.fillStyle = "white";
-  ctx.fillRect(
-    mask.x * output.width,
-    mask.y * output.height,
-    mask.w * output.width,
-    mask.h * output.height,
+function initializeMask() {
+  maskCanvas = document.createElement("canvas");
+  maskCanvas.width = sourceImage.naturalWidth;
+  maskCanvas.height = sourceImage.naturalHeight;
+  maskContext = maskCanvas.getContext("2d", { willReadFrequently: true });
+  maskContext.fillStyle = "black";
+  maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+  hasMask = false;
+}
+
+function paint(from, to, erase) {
+  if (!maskContext) return;
+  maskContext.strokeStyle = erase ? "black" : "white";
+  maskContext.fillStyle = erase ? "black" : "white";
+  maskContext.lineWidth = Number(brushInput.value);
+  maskContext.lineCap = "round";
+  maskContext.lineJoin = "round";
+  maskContext.beginPath();
+  maskContext.moveTo(from.x * maskCanvas.width, from.y * maskCanvas.height);
+  maskContext.lineTo(to.x * maskCanvas.width, to.y * maskCanvas.height);
+  maskContext.stroke();
+  maskContext.beginPath();
+  maskContext.arc(
+    to.x * maskCanvas.width,
+    to.y * maskCanvas.height,
+    Number(brushInput.value) / 2,
+    0,
+    Math.PI * 2,
   );
-  return output.toDataURL("image/png");
+  maskContext.fill();
+  if (!erase) hasMask = true;
+  draw();
 }
 
 document.querySelector("#source-file").addEventListener("change", (event) => {
@@ -101,51 +130,55 @@ document.querySelector("#source-file").addEventListener("change", (event) => {
   reader.onload = () => {
     sourceDataUrl = reader.result;
     sourceImage = new Image();
-    sourceImage.onload = draw;
+    sourceImage.onload = () => {
+      initializeMask();
+      draw();
+    };
     sourceImage.src = sourceDataUrl;
-    mask = null;
   };
   reader.readAsDataURL(file);
 });
 
-canvas.addEventListener("contextmenu", (event) => {
-  event.preventDefault();
+canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+canvas.addEventListener("pointerdown", (event) => {
+  if ((event.button !== 0 && event.button !== 2) || !maskCanvas) return;
   const p = point(event);
   if (!p.inside) return;
-  mask = { x: Math.max(0, p.x - 0.15), y: Math.max(0, p.y - 0.15), w: 0.3, h: 0.3 };
-  if (mask.x + mask.w > 1) mask.x = 1 - mask.w;
-  if (mask.y + mask.h > 1) mask.y = 1 - mask.h;
-  draw();
-});
-
-canvas.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0 || !mask) return;
-  const p = point(event);
-  const frame = imageFrame();
-  const hx = 18 / frame.width;
-  const hy = 18 / frame.height;
-  const resize = Math.abs(p.x - (mask.x + mask.w)) <= hx && Math.abs(p.y - (mask.y + mask.h)) <= hy;
-  const inside = p.x >= mask.x && p.x <= mask.x + mask.w && p.y >= mask.y && p.y <= mask.y + mask.h;
-  if (!resize && !inside) return;
-  interaction = { mode: resize ? "resize" : "move", offsetX: p.x - mask.x, offsetY: p.y - mask.y };
+  event.preventDefault();
+  interaction = { erase: event.button === 2, last: p };
   canvas.setPointerCapture(event.pointerId);
+  paint(p, p, interaction.erase);
 });
-
 canvas.addEventListener("pointermove", (event) => {
-  if (!interaction) return;
-  const p = point(event);
-  if (interaction.mode === "resize") {
-    mask.w = Math.max(0.02, Math.min(1 - mask.x, p.x - mask.x));
-    mask.h = Math.max(0.02, Math.min(1 - mask.y, p.y - mask.y));
+  hoverPoint = point(event);
+  if (interaction) {
+    paint(interaction.last, hoverPoint, interaction.erase);
+    interaction.last = hoverPoint;
   } else {
-    mask.x = Math.max(0, Math.min(1 - mask.w, p.x - interaction.offsetX));
-    mask.y = Math.max(0, Math.min(1 - mask.h, p.y - interaction.offsetY));
+    draw();
   }
+});
+canvas.addEventListener("pointerleave", () => {
+  if (!interaction) {
+    hoverPoint = null;
+    draw();
+  }
+});
+function finishInteraction() {
+  interaction = null;
+}
+canvas.addEventListener("pointerup", finishInteraction);
+canvas.addEventListener("pointercancel", finishInteraction);
+
+brushInput.addEventListener("input", () => {
+  brushValue.value = `${brushInput.value} px`;
   draw();
 });
-canvas.addEventListener("pointerup", () => (interaction = null));
 document.querySelector("#clear-mask").addEventListener("click", () => {
-  mask = null;
+  if (!maskContext) return;
+  maskContext.fillStyle = "black";
+  maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+  hasMask = false;
   draw();
 });
 document
@@ -158,8 +191,8 @@ document.querySelector("#inpaint-run").addEventListener("click", async () => {
   const button = document.querySelector("#inpaint-run");
   const output = document.querySelector("#inpaint-output");
   const prompt = document.querySelector("#edit-prompt").value.trim();
-  if (!sourceImage || !mask || !prompt)
-    return (output.textContent = "Upload an image, place a mask, and enter a prompt.");
+  if (!sourceImage || !hasMask || !prompt)
+    return (output.textContent = "Upload an image, paint a mask, and enter a prompt.");
   button.disabled = true;
   button.textContent = "Inpainting...";
   output.textContent = "Editing with GPT Image...";
@@ -169,7 +202,7 @@ document.querySelector("#inpaint-run").addEventListener("click", async () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         image: sourceDataUrl,
-        mask: makeMaskDataUrl(),
+        mask: maskCanvas.toDataURL("image/png"),
         prompt,
         quality: document.querySelector("#quality").value,
       }),

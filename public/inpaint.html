@@ -32,13 +32,12 @@
             <option>high</option>
           </select></label
         >
-        <div class="panehead">
-          <span>Mask rectangle</span><button id="clear-mask">Clear</button>
-        </div>
-        <small
-          >Right-click the image to place a mask. Drag it to move; drag the bottom-right corner to
-          resize.</small
-        >
+        <div class="panehead"><span>Brush mask</span><button id="clear-mask">Clear</button></div>
+        <label class="brush-control"
+          ><span>Brush size <output id="brush-size-value">80 px</output></span
+          ><input id="brush-size" type="range" min="5" max="300" value="80"
+        /></label>
+        <small>Left-drag to paint editable areas. Right-drag to erase.</small>
       </aside>
       <section class="inpaint-work">
         <canvas id="inpaint-canvas"></canvas>
