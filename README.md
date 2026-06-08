@@ -60,6 +60,11 @@ IdeaDraw updates these nodes before queueing:
 
 If your workflow uses different node IDs, update the constants and assignments in `public/app.js`.
 
+## Inpainting
+
+The optional local inpainting stack uses Qwen Image Edit FP8 with ComfyUI-Inpaint-CropAndStitch. See
+[docs/INPAINT_SETUP.md](docs/INPAINT_SETUP.md).
+
 The region JSON uses normalized coordinates:
 
 ```json
