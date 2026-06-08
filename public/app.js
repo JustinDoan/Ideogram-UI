@@ -130,19 +130,50 @@ function boxLabel(box) {
   return box.desc || "Untitled region";
 }
 
-function boxPixels(box) {
+function imageFrame() {
+  const workspaceWidth = stage.clientWidth;
+  const workspaceHeight = stage.clientHeight;
+  const outputWidth = Number($("#width").value) || DEFAULT_WIDTH;
+  const outputHeight = Number($("#height").value) || DEFAULT_HEIGHT;
+  const padding = 32;
+  const maxWidth = Math.max(1, workspaceWidth - padding * 2);
+  const maxHeight = Math.max(1, workspaceHeight - padding * 2);
+  const scale = Math.min(maxWidth / outputWidth, maxHeight / outputHeight);
+  const width = outputWidth * scale;
+  const height = outputHeight * scale;
+
   return {
-    x: box.x * stage.clientWidth,
-    y: box.y * stage.clientHeight,
-    width: box.w * stage.clientWidth,
-    height: box.h * stage.clientHeight,
+    x: (workspaceWidth - width) / 2,
+    y: (workspaceHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
+function boxPixels(box) {
+  const frame = imageFrame();
+  return {
+    x: frame.x + box.x * frame.width,
+    y: frame.y + box.y * frame.height,
+    width: box.w * frame.width,
+    height: box.h * frame.height,
   };
 }
 
 function drawCanvas() {
   const width = stage.clientWidth;
   const height = stage.clientHeight;
+  const frame = imageFrame();
+  const styles = getComputedStyle(document.documentElement);
   stageContext.clearRect(0, 0, width, height);
+
+  stageContext.fillStyle = styles.getPropertyValue("--panel2").trim();
+  stageContext.fillRect(0, 0, width, height);
+  stageContext.fillStyle = styles.getPropertyValue("--panel").trim();
+  stageContext.fillRect(frame.x, frame.y, frame.width, frame.height);
+  stageContext.strokeStyle = styles.getPropertyValue("--line").trim();
+  stageContext.lineWidth = 2;
+  stageContext.strokeRect(frame.x, frame.y, frame.width, frame.height);
 
   boxes.forEach((box, index) => {
     const rect = boxPixels(box);
@@ -247,10 +278,18 @@ function renderInspectorPanel() {
 }
 
 function normalizedPoint(event) {
-  const rect = stage.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  const frame = imageFrame();
+  const canvasX = event.clientX - stageRect.left;
+  const canvasY = event.clientY - stageRect.top;
   return {
-    x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
-    y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
+    x: Math.max(0, Math.min(1, (canvasX - frame.x) / frame.width)),
+    y: Math.max(0, Math.min(1, (canvasY - frame.y) / frame.height)),
+    inside:
+      canvasX >= frame.x &&
+      canvasX <= frame.x + frame.width &&
+      canvasY >= frame.y &&
+      canvasY <= frame.y + frame.height,
   };
 }
 
@@ -270,8 +309,9 @@ function addBox() {
 }
 
 function hitTest(point) {
-  const handleX = 12 / stage.clientWidth;
-  const handleY = 12 / stage.clientHeight;
+  const frame = imageFrame();
+  const handleX = 12 / frame.width;
+  const handleY = 12 / frame.height;
   for (let index = boxes.length - 1; index >= 0; index -= 1) {
     const box = boxes[index];
     const inside =
@@ -566,6 +606,12 @@ function zoomViewer(factor) {
 function bindEvents() {
   stage.addEventListener("pointerdown", (event) => {
     const point = normalizedPoint(event);
+    if (!point.inside) {
+      selectedBoxIndex = -1;
+      drawCanvas();
+      renderInspectorPanel();
+      return;
+    }
     const hit = hitTest(point);
 
     if (hit) {
@@ -648,6 +694,7 @@ function bindEvents() {
   ["width", "height"].forEach((id) => {
     $(`#${id}`).addEventListener("input", () => {
       resizeStage();
+      drawCanvas();
       saveDraft();
     });
   });
