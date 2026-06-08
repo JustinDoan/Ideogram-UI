@@ -54,6 +54,40 @@
   width: 100%;
   height: auto;
   display: block;
+  cursor: zoom-in;
+}
+#inpaint-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  overflow: hidden;
+  background: #0b0e10ee;
+}
+#inpaint-viewer.open {
+  display: block;
+}
+#inpaint-viewer .viewerbar {
+  position: relative;
+  z-index: 1;
+}
+#inpaint-viewer-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+#inpaint-viewer-stage.dragging {
+  cursor: grabbing;
+}
+#inpaint-viewer-image {
+  display: block;
+  max-width: 85vw;
+  max-height: 82vh;
+  pointer-events: none;
 }
 @media (max-width: 1000px) {
   .inpaint-main {

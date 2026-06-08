@@ -11,6 +11,7 @@ let maskContext = null;
 let hasMask = false;
 let interaction = null;
 let hoverPoint = null;
+let viewerState = { scale: 1, x: 0, y: 0, drag: null };
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -123,6 +124,31 @@ function paint(from, to, erase) {
   draw();
 }
 
+function renderViewer() {
+  document.querySelector("#inpaint-viewer-stage").style.transform =
+    `translate(calc(-50% + ${viewerState.x}px), calc(-50% + ${viewerState.y}px)) scale(${viewerState.scale})`;
+  document.querySelector("#inpaint-zoom-label").textContent =
+    `${Math.round(viewerState.scale * 100)}%`;
+}
+
+function openViewer(url) {
+  document.querySelector("#inpaint-viewer-image").src = url;
+  document.querySelector("#inpaint-viewer").classList.add("open");
+  document.querySelector("#inpaint-viewer").setAttribute("aria-hidden", "false");
+  viewerState = { scale: 1, x: 0, y: 0, drag: null };
+  renderViewer();
+}
+
+function closeViewer() {
+  document.querySelector("#inpaint-viewer").classList.remove("open");
+  document.querySelector("#inpaint-viewer").setAttribute("aria-hidden", "true");
+}
+
+function zoomViewer(factor) {
+  viewerState.scale = Math.max(0.1, Math.min(10, viewerState.scale * factor));
+  renderViewer();
+}
+
 document.querySelector("#source-file").addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -213,6 +239,7 @@ document.querySelector("#inpaint-run").addEventListener("click", async () => {
         typeof result.error === "string" ? result.error : JSON.stringify(result.error),
       );
     output.innerHTML = `<img src="${result.images[0].url}" alt="Inpaint result">`;
+    output.querySelector("img").addEventListener("click", () => openViewer(result.images[0].url));
   } catch (error) {
     output.textContent = error.message;
   } finally {
@@ -230,5 +257,43 @@ fetch("/api/config")
       ? "fal.ai configured"
       : "fal.ai key missing";
   });
+
+document.querySelector("#inpaint-viewer-close").addEventListener("click", closeViewer);
+document.querySelector("#inpaint-zoom-reset").addEventListener("click", () => {
+  viewerState = { scale: 1, x: 0, y: 0, drag: null };
+  renderViewer();
+});
+document.querySelector("#inpaint-zoom-in").addEventListener("click", () => zoomViewer(1.25));
+document.querySelector("#inpaint-zoom-out").addEventListener("click", () => zoomViewer(0.8));
+document.querySelector("#inpaint-viewer").addEventListener("wheel", (event) => {
+  event.preventDefault();
+  zoomViewer(event.deltaY < 0 ? 1.15 : 0.87);
+});
+document.querySelector("#inpaint-viewer-stage").addEventListener("pointerdown", (event) => {
+  viewerState.drag = {
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    originX: viewerState.x,
+    originY: viewerState.y,
+  };
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.currentTarget.classList.add("dragging");
+});
+document.querySelector("#inpaint-viewer-stage").addEventListener("pointermove", (event) => {
+  if (!viewerState.drag || viewerState.drag.pointerId !== event.pointerId) return;
+  viewerState.x = viewerState.drag.originX + event.clientX - viewerState.drag.x;
+  viewerState.y = viewerState.drag.originY + event.clientY - viewerState.drag.y;
+  renderViewer();
+});
+function finishViewerDrag() {
+  viewerState.drag = null;
+  document.querySelector("#inpaint-viewer-stage").classList.remove("dragging");
+}
+document.querySelector("#inpaint-viewer-stage").addEventListener("pointerup", finishViewerDrag);
+document.querySelector("#inpaint-viewer-stage").addEventListener("pointercancel", finishViewerDrag);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeViewer();
+});
 new ResizeObserver(resize).observe(canvas.parentElement);
 setTheme(JSON.parse(localStorage.getItem("ideadraw.theme") || '"dark"'));

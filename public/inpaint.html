@@ -47,6 +47,18 @@
         <div id="inpaint-output"><span>Your edited image will appear here.</span></div>
       </aside>
     </main>
+    <div id="inpaint-viewer" aria-hidden="true">
+      <div class="viewerbar">
+        <span id="inpaint-zoom-label">100%</span>
+        <button id="inpaint-zoom-out" aria-label="Zoom out">-</button>
+        <button id="inpaint-zoom-reset">Reset</button>
+        <button id="inpaint-zoom-in" aria-label="Zoom in">+</button>
+        <button id="inpaint-viewer-close">Close</button>
+      </div>
+      <div id="inpaint-viewer-stage">
+        <img id="inpaint-viewer-image" alt="Inpaint result preview" />
+      </div>
+    </div>
     <script src="inpaint.js"></script>
   </body>
 </html>
