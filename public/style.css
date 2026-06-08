@@ -275,54 +275,13 @@ main {
   background-size: 28px 28px;
 }
 .stage {
-  position: relative;
+  display: block;
   width: 100%;
   height: 100%;
-  background: var(--panel);
+  background: transparent;
   border: 1px solid var(--line);
-  overflow: hidden;
   cursor: crosshair;
   touch-action: none;
-  contain: strict;
-}
-.box {
-  position: absolute;
-  border: 2px solid var(--amber);
-  background: #ff9f1c10;
-  cursor: move;
-  min-width: 15px;
-  min-height: 15px;
-  touch-action: none;
-}
-.box.sel {
-  box-shadow:
-    0 0 0 1px var(--panel),
-    0 0 0 3px var(--amber);
-}
-.box span {
-  position: absolute;
-  top: -23px;
-  left: -2px;
-  background: var(--amber);
-  color: #17120b;
-  padding: 4px 6px;
-  border-radius: 4px 4px 4px 0;
-  font-size: 10px;
-  font-weight: 700;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.box:after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  right: -6px;
-  bottom: -6px;
-  background: var(--panel);
-  border: 2px solid var(--amber);
-  cursor: nwse-resize;
 }
 .region {
   padding: 10px;

@@ -14,10 +14,11 @@ const STORAGE_KEYS = {
 
 const $ = (selector) => document.querySelector(selector);
 const stage = $("#stage");
+const stageContext = stage.getContext("2d");
 
 let boxes = [];
 let selectedBoxIndex = -1;
-let drawingState = null;
+let canvasInteraction = null;
 let lastImageSrc = "";
 let viewerState = { scale: 1, x: 0, y: 0, drag: null };
 
@@ -116,44 +117,67 @@ function setupTabs() {
 }
 
 function resizeStage() {
-  const stageWrapper = stage.parentElement;
-  const wrapperStyle = getComputedStyle(stageWrapper);
-  const horizontalPadding =
-    Number.parseFloat(wrapperStyle.paddingLeft) + Number.parseFloat(wrapperStyle.paddingRight);
-  const verticalPadding =
-    Number.parseFloat(wrapperStyle.paddingTop) + Number.parseFloat(wrapperStyle.paddingBottom);
-  const availableWidth = Math.max(1, stageWrapper.clientWidth - horizontalPadding);
-  const availableHeight = Math.max(1, stageWrapper.clientHeight - verticalPadding);
-
-  stage.style.width = `${availableWidth}px`;
-  stage.style.height = `${availableHeight}px`;
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(1, stage.clientWidth);
+  const height = Math.max(1, stage.clientHeight);
+  stage.width = Math.round(width * ratio);
+  stage.height = Math.round(height * ratio);
+  stageContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+  drawCanvas();
 }
 
 function boxLabel(box) {
   return box.desc || "Untitled region";
 }
 
-function updateBoxElement(element, box, index) {
-  element.style.left = `${box.x * stage.clientWidth}px`;
-  element.style.top = `${box.y * stage.clientHeight}px`;
-  element.style.width = `${box.w * stage.clientWidth}px`;
-  element.style.height = `${box.h * stage.clientHeight}px`;
-  element.classList.toggle("sel", selectedBoxIndex === index);
+function boxPixels(box) {
+  return {
+    x: box.x * stage.clientWidth,
+    y: box.y * stage.clientHeight,
+    width: box.w * stage.clientWidth,
+    height: box.h * stage.clientHeight,
+  };
 }
 
-function updateAllBoxElements() {
-  document.querySelectorAll(".box").forEach((element, index) => {
-    if (boxes[index]) updateBoxElement(element, boxes[index], index);
+function drawCanvas() {
+  const width = stage.clientWidth;
+  const height = stage.clientHeight;
+  stageContext.clearRect(0, 0, width, height);
+
+  boxes.forEach((box, index) => {
+    const rect = boxPixels(box);
+    const color = BOX_COLORS[index % BOX_COLORS.length];
+    const selected = index === selectedBoxIndex;
+
+    stageContext.fillStyle = `${color}18`;
+    stageContext.fillRect(rect.x, rect.y, rect.width, rect.height);
+    stageContext.strokeStyle = color;
+    stageContext.lineWidth = selected ? 3 : 2;
+    stageContext.strokeRect(rect.x, rect.y, rect.width, rect.height);
+
+    const label = boxLabel(box);
+    stageContext.font = "600 11px Inter, Segoe UI, sans-serif";
+    const labelWidth = Math.min(stageContext.measureText(label).width + 12, rect.width);
+    const labelY = Math.max(0, rect.y - 22);
+    stageContext.fillStyle = color;
+    stageContext.fillRect(rect.x, labelY, labelWidth, 22);
+    stageContext.fillStyle = "#17120b";
+    stageContext.save();
+    stageContext.beginPath();
+    stageContext.rect(rect.x + 5, labelY, Math.max(0, labelWidth - 8), 22);
+    stageContext.clip();
+    stageContext.fillText(label, rect.x + 6, labelY + 15);
+    stageContext.restore();
+
+    if (selected) {
+      stageContext.fillStyle = color;
+      stageContext.fillRect(rect.x + rect.width - 6, rect.y + rect.height - 6, 12, 12);
+    }
   });
 }
 
 function renderBoxes() {
-  stage.replaceChildren();
-
-  boxes.forEach((box, index) => {
-    stage.append(createBoxElement(box, index));
-  });
-
+  drawCanvas();
   renderRegionList(false);
   saveDraft();
 }
@@ -209,10 +233,7 @@ function renderInspectorPanel() {
     const input = $(`#${key}`);
     input.addEventListener("input", (event) => {
       box[key] = event.target.value;
-      if (key === "desc") {
-        const label = document.querySelectorAll(".box")[selectedBoxIndex]?.querySelector("span");
-        if (label) label.textContent = boxLabel(box);
-      }
+      if (key === "desc") drawCanvas();
       saveDraft();
     });
     input.addEventListener("change", () => renderRegionList());
@@ -248,59 +269,18 @@ function addBox() {
   renderBoxes();
 }
 
-function createBoxElement(box, index) {
-  const element = document.createElement("div");
-  const label = document.createElement("span");
-
-  element.className = "box";
-  element.style.borderColor = BOX_COLORS[index % BOX_COLORS.length];
-  label.style.background = BOX_COLORS[index % BOX_COLORS.length];
-  label.textContent = boxLabel(box);
-  element.append(label);
-  updateBoxElement(element, box, index);
-  element.addEventListener("pointerdown", (event) => startBoxDrag(event, index, element));
-  return element;
-}
-
-function startBoxDrag(event, index, element) {
-  event.stopPropagation();
-  selectedBoxIndex = index;
-
-  const box = boxes[index];
-  const pointerStart = normalizedPoint(event);
-  const grabOffset = {
-    x: pointerStart.x - box.x,
-    y: pointerStart.y - box.y,
-  };
-  const resize =
-    event.offsetX > element.clientWidth - 18 && event.offsetY > element.clientHeight - 18;
-
-  element.setPointerCapture(event.pointerId);
-  document.querySelectorAll(".box").forEach((item, itemIndex) => {
-    item.classList.toggle("sel", itemIndex === index);
-  });
-  renderRegionList();
-
-  element.onpointermove = (moveEvent) => {
-    const point = normalizedPoint(moveEvent);
-
-    if (resize) {
-      box.w = Math.max(0.02, Math.min(1 - box.x, point.x - box.x));
-      box.h = Math.max(0.02, Math.min(1 - box.y, point.y - box.y));
-    } else {
-      box.x = Math.max(0, Math.min(1 - box.w, point.x - grabOffset.x));
-      box.y = Math.max(0, Math.min(1 - box.h, point.y - grabOffset.y));
-    }
-
-    updateBoxElement(element, box, index);
-  };
-
-  element.onpointerup = () => {
-    element.onpointermove = null;
-    element.onpointerup = null;
-    renderRegionList();
-    saveDraft();
-  };
+function hitTest(point) {
+  const handleX = 12 / stage.clientWidth;
+  const handleY = 12 / stage.clientHeight;
+  for (let index = boxes.length - 1; index >= 0; index -= 1) {
+    const box = boxes[index];
+    const inside =
+      point.x >= box.x && point.x <= box.x + box.w && point.y >= box.y && point.y <= box.y + box.h;
+    if (!inside) continue;
+    const resize = point.x >= box.x + box.w - handleX && point.y >= box.y + box.h - handleY;
+    return { index, resize };
+  }
+  return null;
 }
 
 function renderLayouts() {
@@ -585,47 +565,66 @@ function zoomViewer(factor) {
 
 function bindEvents() {
   stage.addEventListener("pointerdown", (event) => {
-    if (event.target !== stage) return;
-    const start = normalizedPoint(event);
-    const box = {
-      x: start.x,
-      y: start.y,
-      w: 0.01,
-      h: 0.01,
-      type: "obj",
-      text: "",
-      desc: "New region",
-      palette: [],
-    };
-    boxes.push(box);
-    selectedBoxIndex = boxes.length - 1;
-    const element = createBoxElement(box, selectedBoxIndex);
-    stage.append(element);
-    drawingState = { box, element, start };
+    const point = normalizedPoint(event);
+    const hit = hitTest(point);
+
+    if (hit) {
+      selectedBoxIndex = hit.index;
+      const box = boxes[hit.index];
+      canvasInteraction = {
+        mode: hit.resize ? "resize" : "move",
+        box,
+        offsetX: point.x - box.x,
+        offsetY: point.y - box.y,
+      };
+    } else {
+      const box = {
+        x: point.x,
+        y: point.y,
+        w: 0.01,
+        h: 0.01,
+        type: "obj",
+        text: "",
+        desc: "New region",
+        palette: [],
+      };
+      boxes.push(box);
+      selectedBoxIndex = boxes.length - 1;
+      canvasInteraction = { mode: "draw", box, start: point };
+    }
+
     stage.setPointerCapture(event.pointerId);
+    drawCanvas();
     renderRegionList();
   });
   stage.addEventListener("pointermove", (event) => {
-    if (!drawingState) return;
+    if (!canvasInteraction) return;
     const point = normalizedPoint(event);
-    const left = Math.min(drawingState.start.x, point.x);
-    const top = Math.min(drawingState.start.y, point.y);
-    drawingState.box.x = left;
-    drawingState.box.y = top;
-    drawingState.box.w = Math.max(0.01, Math.abs(point.x - drawingState.start.x));
-    drawingState.box.h = Math.max(0.01, Math.abs(point.y - drawingState.start.y));
-    updateBoxElement(drawingState.element, drawingState.box, selectedBoxIndex);
+    const { box, mode } = canvasInteraction;
+
+    if (mode === "draw") {
+      box.x = Math.min(canvasInteraction.start.x, point.x);
+      box.y = Math.min(canvasInteraction.start.y, point.y);
+      box.w = Math.max(0.01, Math.abs(point.x - canvasInteraction.start.x));
+      box.h = Math.max(0.01, Math.abs(point.y - canvasInteraction.start.y));
+    } else if (mode === "move") {
+      box.x = Math.max(0, Math.min(1 - box.w, point.x - canvasInteraction.offsetX));
+      box.y = Math.max(0, Math.min(1 - box.h, point.y - canvasInteraction.offsetY));
+    } else {
+      box.w = Math.max(0.02, Math.min(1 - box.x, point.x - box.x));
+      box.h = Math.max(0.02, Math.min(1 - box.y, point.y - box.y));
+    }
+    drawCanvas();
   });
   stage.addEventListener("pointerup", () => {
-    if (!drawingState) return;
-    drawingState = null;
+    if (!canvasInteraction) return;
+    canvasInteraction = null;
     renderRegionList();
     saveDraft();
   });
   stage.addEventListener("pointercancel", () => {
-    if (!drawingState) return;
-    drawingState = null;
-    renderBoxes();
+    canvasInteraction = null;
+    drawCanvas();
   });
 
   $("#add").addEventListener("click", addBox);
@@ -700,12 +699,10 @@ function bindEvents() {
   });
   addEventListener("resize", () => {
     resizeStage();
-    updateAllBoxElements();
     renderPreviewOverlay();
   });
   new ResizeObserver(() => {
     resizeStage();
-    updateAllBoxElements();
     renderPreviewOverlay();
   }).observe(stage.parentElement);
 }
