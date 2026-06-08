@@ -319,8 +319,8 @@ function addBoxAt(centerX, centerY) {
 
 function hitTest(point) {
   const frame = imageFrame();
-  const handleX = 12 / frame.width;
-  const handleY = 12 / frame.height;
+  const handleX = 28 / frame.width;
+  const handleY = 28 / frame.height;
   for (let index = boxes.length - 1; index >= 0; index -= 1) {
     const box = boxes[index];
     const inside =
