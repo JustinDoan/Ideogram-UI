@@ -17,7 +17,7 @@ const stage = $("#stage");
 
 let boxes = [];
 let selectedBoxIndex = -1;
-let drawingBox = null;
+let drawingState = null;
 let lastImageSrc = "";
 let viewerState = { scale: 1, x: 0, y: 0, drag: null };
 
@@ -140,17 +140,7 @@ function renderBoxes() {
   stage.replaceChildren();
 
   boxes.forEach((box, index) => {
-    const element = document.createElement("div");
-    const label = document.createElement("span");
-
-    element.className = "box";
-    element.style.borderColor = BOX_COLORS[index % BOX_COLORS.length];
-    label.style.background = BOX_COLORS[index % BOX_COLORS.length];
-    label.textContent = boxLabel(box);
-    element.append(label);
-    updateBoxElement(element, box, index);
-    element.addEventListener("pointerdown", (event) => startBoxDrag(event, index, element));
-    stage.append(element);
+    stage.append(createBoxElement(box, index));
   });
 
   renderRegionList(false);
@@ -245,6 +235,20 @@ function addBox() {
   });
   selectedBoxIndex = boxes.length - 1;
   renderBoxes();
+}
+
+function createBoxElement(box, index) {
+  const element = document.createElement("div");
+  const label = document.createElement("span");
+
+  element.className = "box";
+  element.style.borderColor = BOX_COLORS[index % BOX_COLORS.length];
+  label.style.background = BOX_COLORS[index % BOX_COLORS.length];
+  label.textContent = boxLabel(box);
+  element.append(label);
+  updateBoxElement(element, box, index);
+  element.addEventListener("pointerdown", (event) => startBoxDrag(event, index, element));
+  return element;
 }
 
 function startBoxDrag(event, index, element) {
@@ -570,10 +574,10 @@ function zoomViewer(factor) {
 function bindEvents() {
   stage.addEventListener("pointerdown", (event) => {
     if (event.target !== stage) return;
-    const point = normalizedPoint(event);
-    drawingBox = {
-      x: point.x,
-      y: point.y,
+    const start = normalizedPoint(event);
+    const box = {
+      x: start.x,
+      y: start.y,
       w: 0.01,
       h: 0.01,
       type: "obj",
@@ -581,19 +585,34 @@ function bindEvents() {
       desc: "New region",
       palette: [],
     };
-    boxes.push(drawingBox);
+    boxes.push(box);
     selectedBoxIndex = boxes.length - 1;
+    const element = createBoxElement(box, selectedBoxIndex);
+    stage.append(element);
+    drawingState = { box, element, start };
     stage.setPointerCapture(event.pointerId);
+    renderRegionList();
   });
   stage.addEventListener("pointermove", (event) => {
-    if (!drawingBox) return;
+    if (!drawingState) return;
     const point = normalizedPoint(event);
-    drawingBox.w = Math.max(0.01, point.x - drawingBox.x);
-    drawingBox.h = Math.max(0.01, point.y - drawingBox.y);
-    renderBoxes();
+    const left = Math.min(drawingState.start.x, point.x);
+    const top = Math.min(drawingState.start.y, point.y);
+    drawingState.box.x = left;
+    drawingState.box.y = top;
+    drawingState.box.w = Math.max(0.01, Math.abs(point.x - drawingState.start.x));
+    drawingState.box.h = Math.max(0.01, Math.abs(point.y - drawingState.start.y));
+    updateBoxElement(drawingState.element, drawingState.box, selectedBoxIndex);
   });
   stage.addEventListener("pointerup", () => {
-    drawingBox = null;
+    if (!drawingState) return;
+    drawingState = null;
+    renderRegionList();
+    saveDraft();
+  });
+  stage.addEventListener("pointercancel", () => {
+    if (!drawingState) return;
+    drawingState = null;
     renderBoxes();
   });
 
