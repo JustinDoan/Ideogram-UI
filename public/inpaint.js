@@ -149,6 +149,36 @@ function zoomViewer(factor) {
   renderViewer();
 }
 
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not load the generated image."));
+    image.src = url;
+  });
+}
+
+async function compositeMaskedResult(resultUrl) {
+  const generated = await loadImage(resultUrl);
+  const output = document.createElement("canvas");
+  output.width = sourceImage.naturalWidth;
+  output.height = sourceImage.naturalHeight;
+  const outputContext = output.getContext("2d");
+  outputContext.drawImage(sourceImage, 0, 0);
+
+  const editedArea = document.createElement("canvas");
+  editedArea.width = output.width;
+  editedArea.height = output.height;
+  const editedContext = editedArea.getContext("2d");
+  editedContext.drawImage(generated, 0, 0, output.width, output.height);
+  editedContext.globalCompositeOperation = "destination-in";
+  editedContext.drawImage(maskCanvas, 0, 0);
+
+  outputContext.drawImage(editedArea, 0, 0);
+  return output.toDataURL("image/png");
+}
+
 document.querySelector("#source-file").addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -238,8 +268,9 @@ document.querySelector("#inpaint-run").addEventListener("click", async () => {
       throw new Error(
         typeof result.error === "string" ? result.error : JSON.stringify(result.error),
       );
-    output.innerHTML = `<img src="${result.images[0].url}" alt="Inpaint result">`;
-    output.querySelector("img").addEventListener("click", () => openViewer(result.images[0].url));
+    const compositedUrl = await compositeMaskedResult(result.images[0].url);
+    output.innerHTML = `<img src="${compositedUrl}" alt="Inpaint result">`;
+    output.querySelector("img").addEventListener("click", () => openViewer(compositedUrl));
   } catch (error) {
     output.textContent = error.message;
   } finally {
