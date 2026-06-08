@@ -118,7 +118,15 @@ function setupTabs() {
 function resizeStage() {
   const width = Number($("#width").value) || DEFAULT_WIDTH;
   const height = Number($("#height").value) || DEFAULT_HEIGHT;
-  const scale = Math.min((innerWidth - 620) / width, (innerHeight - 150) / height, 1);
+  const stageWrapper = stage.parentElement;
+  const wrapperStyle = getComputedStyle(stageWrapper);
+  const horizontalPadding =
+    Number.parseFloat(wrapperStyle.paddingLeft) + Number.parseFloat(wrapperStyle.paddingRight);
+  const verticalPadding =
+    Number.parseFloat(wrapperStyle.paddingTop) + Number.parseFloat(wrapperStyle.paddingBottom);
+  const availableWidth = Math.max(1, stageWrapper.clientWidth - horizontalPadding);
+  const availableHeight = Math.max(1, stageWrapper.clientHeight - verticalPadding);
+  const scale = Math.min(availableWidth / width, availableHeight / height, 1);
 
   stage.style.width = `${width * scale}px`;
   stage.style.height = `${height * scale}px`;
@@ -690,6 +698,10 @@ function bindEvents() {
     resizeStage();
     renderPreviewOverlay();
   });
+  new ResizeObserver(() => {
+    resizeStage();
+    renderPreviewOverlay();
+  }).observe(stage.parentElement);
 }
 
 async function init() {
