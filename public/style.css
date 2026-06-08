@@ -242,9 +242,11 @@ main {
 }
 .work {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--panel2);
+  overflow: hidden;
 }
 .toolbar {
   height: 56px;
@@ -263,6 +265,7 @@ main {
   background: var(--panel2);
 }
 .stagewrap {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -275,9 +278,11 @@ main {
   background-size: 28px 28px;
 }
 .stage {
+  position: absolute;
+  inset: 0;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
   background: transparent;
   border: 1px solid var(--line);
   cursor: crosshair;
