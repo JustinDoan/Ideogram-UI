@@ -297,11 +297,17 @@ function normalizedPoint(event) {
 }
 
 function addBox() {
+  addBoxAt(0.25, 0.25);
+}
+
+function addBoxAt(centerX, centerY) {
+  const width = 0.3;
+  const height = 0.3;
   boxes.push({
-    x: 0.1,
-    y: 0.1,
-    w: 0.3,
-    h: 0.3,
+    x: Math.max(0, Math.min(1 - width, centerX - width / 2)),
+    y: Math.max(0, Math.min(1 - height, centerY - height / 2)),
+    w: width,
+    h: height,
     type: "obj",
     text: "",
     desc: "New region",
@@ -608,6 +614,7 @@ function zoomViewer(factor) {
 
 function bindEvents() {
   stage.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
     const point = normalizedPoint(event);
     if (!point.inside) {
       selectedBoxIndex = -1;
@@ -627,19 +634,11 @@ function bindEvents() {
         offsetY: point.y - box.y,
       };
     } else {
-      const box = {
-        x: point.x,
-        y: point.y,
-        w: 0.01,
-        h: 0.01,
-        type: "obj",
-        text: "",
-        desc: "New region",
-        palette: [],
-      };
-      boxes.push(box);
-      selectedBoxIndex = boxes.length - 1;
-      canvasInteraction = { mode: "draw", box, start: point };
+      selectedBoxIndex = -1;
+      canvasInteraction = null;
+      drawCanvas();
+      renderRegionList();
+      return;
     }
 
     stage.setPointerCapture(event.pointerId);
@@ -651,12 +650,7 @@ function bindEvents() {
     const point = normalizedPoint(event);
     const { box, mode } = canvasInteraction;
 
-    if (mode === "draw") {
-      box.x = Math.min(canvasInteraction.start.x, point.x);
-      box.y = Math.min(canvasInteraction.start.y, point.y);
-      box.w = Math.max(0.01, Math.abs(point.x - canvasInteraction.start.x));
-      box.h = Math.max(0.01, Math.abs(point.y - canvasInteraction.start.y));
-    } else if (mode === "move") {
+    if (mode === "move") {
       box.x = Math.max(0, Math.min(1 - box.w, point.x - canvasInteraction.offsetX));
       box.y = Math.max(0, Math.min(1 - box.h, point.y - canvasInteraction.offsetY));
     } else {
@@ -674,6 +668,12 @@ function bindEvents() {
   stage.addEventListener("pointercancel", () => {
     canvasInteraction = null;
     drawCanvas();
+  });
+  stage.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    const point = normalizedPoint(event);
+    if (!point.inside) return;
+    addBoxAt(point.x, point.y);
   });
 
   $("#add").addEventListener("click", addBox);
