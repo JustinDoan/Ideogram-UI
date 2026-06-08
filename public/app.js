@@ -265,7 +265,10 @@ function startBoxDrag(event, index, element) {
 
   const box = boxes[index];
   const pointerStart = normalizedPoint(event);
-  const boxStart = { ...box };
+  const grabOffset = {
+    x: pointerStart.x - box.x,
+    y: pointerStart.y - box.y,
+  };
   const resize =
     event.offsetX > element.clientWidth - 18 && event.offsetY > element.clientHeight - 18;
 
@@ -277,15 +280,13 @@ function startBoxDrag(event, index, element) {
 
   element.onpointermove = (moveEvent) => {
     const point = normalizedPoint(moveEvent);
-    const dx = point.x - pointerStart.x;
-    const dy = point.y - pointerStart.y;
 
     if (resize) {
-      box.w = Math.max(0.02, Math.min(1 - box.x, boxStart.w + dx));
-      box.h = Math.max(0.02, Math.min(1 - box.y, boxStart.h + dy));
+      box.w = Math.max(0.02, Math.min(1 - box.x, point.x - box.x));
+      box.h = Math.max(0.02, Math.min(1 - box.y, point.y - box.y));
     } else {
-      box.x = Math.max(0, Math.min(1 - box.w, boxStart.x + dx));
-      box.y = Math.max(0, Math.min(1 - box.h, boxStart.y + dy));
+      box.x = Math.max(0, Math.min(1 - box.w, point.x - grabOffset.x));
+      box.y = Math.max(0, Math.min(1 - box.h, point.y - grabOffset.y));
     }
 
     updateBoxElement(element, box, index);

@@ -284,6 +284,7 @@ main {
   box-shadow: var(--shadow);
   overflow: hidden;
   cursor: crosshair;
+  touch-action: none;
 }
 .box {
   position: absolute;
@@ -292,6 +293,7 @@ main {
   cursor: move;
   min-width: 15px;
   min-height: 15px;
+  touch-action: none;
 }
 .box.sel {
   box-shadow:
