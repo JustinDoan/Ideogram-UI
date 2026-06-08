@@ -319,15 +319,23 @@ function addBoxAt(centerX, centerY) {
 
 function hitTest(point) {
   const frame = imageFrame();
-  const handleX = 28 / frame.width;
-  const handleY = 28 / frame.height;
+  const handleHalfX = 14 / frame.width;
+  const handleHalfY = 14 / frame.height;
   for (let index = boxes.length - 1; index >= 0; index -= 1) {
     const box = boxes[index];
+    const cornerX = box.x + box.w;
+    const cornerY = box.y + box.h;
+    const resize =
+      point.x >= cornerX - handleHalfX &&
+      point.x <= cornerX + handleHalfX &&
+      point.y >= cornerY - handleHalfY &&
+      point.y <= cornerY + handleHalfY;
+    if (resize) return { index, resize: true };
+
     const inside =
       point.x >= box.x && point.x <= box.x + box.w && point.y >= box.y && point.y <= box.y + box.h;
     if (!inside) continue;
-    const resize = point.x >= box.x + box.w - handleX && point.y >= box.y + box.h - handleY;
-    return { index, resize };
+    return { index, resize: false };
   }
   return null;
 }
