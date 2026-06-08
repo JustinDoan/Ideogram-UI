@@ -116,8 +116,6 @@ function setupTabs() {
 }
 
 function resizeStage() {
-  const width = Number($("#width").value) || DEFAULT_WIDTH;
-  const height = Number($("#height").value) || DEFAULT_HEIGHT;
   const stageWrapper = stage.parentElement;
   const wrapperStyle = getComputedStyle(stageWrapper);
   const horizontalPadding =
@@ -126,10 +124,9 @@ function resizeStage() {
     Number.parseFloat(wrapperStyle.paddingTop) + Number.parseFloat(wrapperStyle.paddingBottom);
   const availableWidth = Math.max(1, stageWrapper.clientWidth - horizontalPadding);
   const availableHeight = Math.max(1, stageWrapper.clientHeight - verticalPadding);
-  const scale = Math.min(availableWidth / width, availableHeight / height, 1);
 
-  stage.style.width = `${width * scale}px`;
-  stage.style.height = `${height * scale}px`;
+  stage.style.width = `${availableWidth}px`;
+  stage.style.height = `${availableHeight}px`;
 }
 
 function boxLabel(box) {
@@ -137,11 +134,17 @@ function boxLabel(box) {
 }
 
 function updateBoxElement(element, box, index) {
-  element.style.left = `${box.x * 100}%`;
-  element.style.top = `${box.y * 100}%`;
-  element.style.width = `${box.w * 100}%`;
-  element.style.height = `${box.h * 100}%`;
+  element.style.left = `${box.x * stage.clientWidth}px`;
+  element.style.top = `${box.y * stage.clientHeight}px`;
+  element.style.width = `${box.w * stage.clientWidth}px`;
+  element.style.height = `${box.h * stage.clientHeight}px`;
   element.classList.toggle("sel", selectedBoxIndex === index);
+}
+
+function updateAllBoxElements() {
+  document.querySelectorAll(".box").forEach((element, index) => {
+    if (boxes[index]) updateBoxElement(element, boxes[index], index);
+  });
 }
 
 function renderBoxes() {
@@ -697,10 +700,12 @@ function bindEvents() {
   });
   addEventListener("resize", () => {
     resizeStage();
+    updateAllBoxElements();
     renderPreviewOverlay();
   });
   new ResizeObserver(() => {
     resizeStage();
+    updateAllBoxElements();
     renderPreviewOverlay();
   }).observe(stage.parentElement);
 }
