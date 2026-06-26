@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>IdeaDraw GPT Image</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="generate.css" />
+  </head>
+  <body class="generate-page">
+    <header>
+      <div class="brand"><b>GPT Image</b></div>
+      <div class="status" id="falstatus"><i></i><span>Checking fal.ai</span></div>
+      <a class="navlink" href="/">Spatial Generate</a>
+      <a class="navlink" href="/inpaint.html">Inpaint</a>
+      <button id="theme">Light</button>
+      <button id="generate-run">Generate</button>
+    </header>
+    <main class="generate-main">
+      <aside class="generate-controls">
+        <label
+          >Prompt<textarea
+            id="prompt"
+            rows="10"
+            placeholder="Describe the image you want GPT Image 2 to create"
+          ></textarea>
+        </label>
+        <label
+          >Quality<select id="quality">
+            <option selected>low</option>
+            <option>medium</option>
+            <option>high</option>
+            <option>auto</option>
+          </select></label
+        >
+        <label
+          >Size<select id="image-size">
+            <option value="landscape_4_3" selected>Landscape 4:3</option>
+            <option value="landscape_16_9">Landscape 16:9</option>
+            <option value="square_hd">Square HD</option>
+            <option value="square">Square</option>
+            <option value="portrait_4_3">Portrait 4:3</option>
+            <option value="portrait_16_9">Portrait 16:9</option>
+            <option value="auto">Auto</option>
+          </select></label
+        >
+        <label
+          >Format<select id="output-format">
+            <option selected>png</option>
+            <option>webp</option>
+            <option>jpeg</option>
+          </select></label
+        >
+        <label class="toggle line-toggle"
+          ><input id="four-up" type="checkbox" /><span>Generate 4 images</span></label
+        >
+        <small
+          >Uses fal.ai GPT Image 2. Low quality is selected by default for faster drafts.</small
+        >
+      </aside>
+      <section class="generate-view">
+        <div class="generate-toolbar">
+          <span id="viewer-title">Ready</span>
+          <button id="download-image" disabled>Download</button>
+          <button id="copy-image" disabled>Copy</button>
+        </div>
+        <div id="image-grid" class="empty">
+          <span>Generated images will appear here.</span>
+        </div>
+      </section>
+    </main>
+    <div id="generate-viewer" aria-hidden="true">
+      <div class="viewerbar">
+        <span id="zoom-label">100%</span>
+        <button id="zoom-out" aria-label="Zoom out">-</button>
+        <button id="zoom-reset">Reset</button>
+        <button id="zoom-in" aria-label="Zoom in">+</button>
+        <button id="viewer-close">Close</button>
+      </div>
+      <div id="viewer-stage">
+        <img id="viewer-image" alt="Generated image preview" />
+      </div>
+    </div>
+    <script src="generate.js"></script>
+  </body>
+</html>

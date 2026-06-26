@@ -81,6 +81,58 @@ function createApp() {
     }
   });
 
+  app.post("/api/generate-image", async (req, res) => {
+    const apiKey = process.env.FAL_KEY;
+    const {
+      prompt,
+      quality = "low",
+      imageSize = "landscape_4_3",
+      numImages = 1,
+      outputFormat = "png",
+    } = req.body;
+    if (!apiKey) return res.status(503).json({ error: "FAL_KEY is not configured." });
+    if (!prompt) return res.status(400).json({ error: "Prompt is required." });
+
+    const safeQuality = ["auto", "low", "medium", "high"].includes(quality) ? quality : "low";
+    const safeSize = [
+      "square_hd",
+      "square",
+      "portrait_4_3",
+      "portrait_16_9",
+      "landscape_4_3",
+      "landscape_16_9",
+      "auto",
+    ].includes(imageSize)
+      ? imageSize
+      : "landscape_4_3";
+    const safeNumImages = Number(numImages) === 4 ? 4 : 1;
+    const safeFormat = ["jpeg", "png", "webp"].includes(outputFormat) ? outputFormat : "png";
+
+    try {
+      const response = await fetch("https://fal.run/openai/gpt-image-2", {
+        method: "POST",
+        headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          image_size: safeSize,
+          quality: safeQuality,
+          num_images: safeNumImages,
+          output_format: safeFormat,
+          sync_mode: true,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        return res.status(response.status).json({ error: result.detail || result.error || result });
+      res.json(result);
+    } catch (error) {
+      res.status(502).json({
+        error: "Unable to complete fal.ai image request.",
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
   app.all(/^\/comfy(\/.*)?$/, async (req, res) => {
     try {
       const targetUrl = new URL(getComfyBaseUrl(req) + req.originalUrl.replace(/^\/comfy/, ""));
